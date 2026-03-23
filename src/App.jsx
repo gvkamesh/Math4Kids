@@ -4,13 +4,23 @@ import confetti from 'canvas-confetti'
 import './index.css'
 
 function App() {
-  const [view, setView] = useState('intro') // intro, dashboard, quiz
+  const [view, setView] = useState('intro') // intro, dashboard, quiz, parent, testResult
   const [userName, setUserName] = useState('')
   const [grade, setGrade] = useState('Kindergarten')
   
   const [level, setLevel] = useState(1)
   const [xp, setXp] = useState(0)
   const [streak, setStreak] = useState(0)
+  
+  // Track long-term stats for Parent Dashboard
+  const [highestStreak, setHighestStreak] = useState(0)
+  const [totalCorrect, setTotalCorrect] = useState(0)
+  
+  // Test Mode
+  const [isTestMode, setIsTestMode] = useState(false)
+  const [testScore, setTestScore] = useState(0)
+  const [questionsAnswered, setQuestionsAnswered] = useState(0)
+  const TEST_LENGTH = 10;
   
   const [selectedModules, setSelectedModules] = useState(['Addition'])
   const modulesAvailable = [
@@ -28,7 +38,6 @@ function App() {
   const [problem, setProblem] = useState(null)
   const [userAnswer, setUserAnswer] = useState('')
   const [feedback, setFeedback] = useState(null) // 'correct', 'incorrect', null
-  const [questionsAnswered, setQuestionsAnswered] = useState(0)
 
   const XP_PER_LEVEL = 100;
 
@@ -55,8 +64,17 @@ function App() {
 
   const startQuiz = () => {
     if (selectedModules.length === 0) return;
-    // Don't reset level! Keep their progression going.
+    setIsTestMode(false);
     setQuestionsAnswered(0);
+    loadProblem()
+    setView('quiz')
+  }
+
+  const startTest = () => {
+    if (selectedModules.length === 0) return;
+    setIsTestMode(true);
+    setQuestionsAnswered(0);
+    setTestScore(0);
     loadProblem()
     setView('quiz')
   }
@@ -66,12 +84,20 @@ function App() {
     
     // Evaluate taking into account integers or floating point for division
     const isCorrect = Math.abs(parseFloat(userAnswer) - problem.answer) < 0.01;
+    const totalA = questionsAnswered + 1;
     
     if (isCorrect) {
       setFeedback('correct');
       const newStreak = streak + 1;
       setStreak(newStreak);
-      setQuestionsAnswered(q => q + 1);
+      setQuestionsAnswered(totalA);
+      
+      setTotalCorrect(t => t + 1);
+      if (newStreak > highestStreak) setHighestStreak(newStreak);
+
+      if (isTestMode) {
+        setTestScore(s => s + 1);
+      }
       
       confetti({
         particleCount: Math.min(150, 50 + (newStreak * 10)),
@@ -83,7 +109,13 @@ function App() {
       const earnedXP = 20 + (newStreak * 5); // Base 20 XP + streak bonus
       const nextXp = xp + earnedXP;
       
-      if (nextXp >= XP_PER_LEVEL) {
+      if (isTestMode && totalA >= TEST_LENGTH) {
+         setTimeout(() => {
+           setView('testResult');
+           setFeedback(null);
+           setUserAnswer('');
+         }, 1000);
+      } else if (!isTestMode && nextXp >= XP_PER_LEVEL) {
         // Level up
         setTimeout(() => {
            setLevel(l => l + 1);
@@ -92,15 +124,20 @@ function App() {
            loadProblem();
         }, 1200);
       } else {
-        setXp(nextXp);
+        if (!isTestMode) setXp(nextXp);
         setTimeout(loadProblem, 1000);
       }
     } else {
       setFeedback('incorrect');
       setStreak(0);
+      setQuestionsAnswered(totalA);
+      
       setTimeout(() => {
         setFeedback(null);
         setUserAnswer('');
+        if (isTestMode && totalA >= TEST_LENGTH) {
+            setView('testResult');
+        }
       }, 1500);
     }
   }
@@ -138,7 +175,7 @@ function App() {
                </button>
                <button className="hover:text-white transition-colors cursor-pointer flex items-center gap-2">📊 Progress</button>
                <button className="hover:text-white transition-colors cursor-pointer flex items-center gap-2">⚙️ Settings</button>
-               <button className="hover:text-white transition-colors cursor-pointer flex items-center gap-2">👪 Parent</button>
+               <button onClick={() => setView('parent')} className="hover:text-white transition-colors cursor-pointer flex items-center gap-2">👪 Parent</button>
                <button className="bg-orange-600/80 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition-colors ml-4" onClick={() => setView('intro')}>Logout</button>
              </div>
           </div>
@@ -203,7 +240,6 @@ function App() {
       </div>
 
       <div className="w-full max-w-4xl space-y-8">
-        {/* Grades Selector */}
         <div>
           <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
             🎓 Select Your Grade
@@ -223,7 +259,6 @@ function App() {
           </div>
         </div>
 
-        {/* Modules Selector */}
         <div>
           <div className="flex justify-between items-center mb-4">
              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -268,9 +303,10 @@ function App() {
            🎯 Play
         </button>
         <button 
-          className="bg-violet-600 text-white font-bold py-4 px-8 rounded-2xl shadow-md text-xl flex items-center justify-center gap-2 kid-button w-full opacity-90"
+          onClick={startTest}
+          className="bg-violet-600 hover:bg-violet-500 text-white font-bold py-4 px-8 rounded-2xl shadow-md text-xl flex items-center justify-center gap-2 kid-button w-full transition-colors"
         >
-           📝 Test
+           📝 Test ({TEST_LENGTH} Qs)
         </button>
       </div>
     </div>
@@ -291,7 +327,6 @@ function App() {
       <div className="flex-1 flex flex-col items-center justify-center p-4 animate-in zoom-in duration-300 w-full relative">
         <div className={`bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-6 md:p-10 w-full max-w-2xl border-b-8 relative overflow-hidden ${feedback === 'correct' ? 'border-emerald-500 bg-emerald-50/50' : feedback === 'incorrect' ? 'border-rose-500 bg-rose-50/50 animate-shake' : 'border-violet-600'}`}>
            
-           {/* Top Stats Bar */}
            <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-4">
              <div className="flex items-center gap-2 text-gray-600 font-semibold">
                <span>Operation: <span className="text-violet-700">{selectedModules.join(', ')}</span></span>
@@ -305,10 +340,9 @@ function App() {
            </div>
 
            <div className="text-center font-bold text-gray-500 mb-6">
-              Questions: {questionsAnswered + 1} | Streak: {streak} 🔥
+              {isTestMode ? `Test Question: ${questionsAnswered + 1} / ${TEST_LENGTH}` : `Questions: ${questionsAnswered + 1} | Streak: ${streak} 🔥`}
            </div>
 
-           {/* Problem Display */}
            <div className={`text-6xl md:text-[5rem] font-extrabold text-center mb-10 tracking-wider text-slate-800 flex justify-center items-center gap-4 ${feedback === 'correct' ? 'animate-pop text-emerald-600' : ''}`}>
              <span>{problem.a}</span>
              <span className={problem.op === '+' ? 'text-rose-400' : problem.op === '-' ? 'text-indigo-400' : 'text-violet-400'}>{problem.op === '*' ? '×' : problem.op === '/' ? '÷' : problem.op}</span>
@@ -317,7 +351,6 @@ function App() {
              <span className="text-violet-600">?</span>
            </div>
 
-           {/* Input Area */}
            <div className="max-w-md mx-auto relative group">
              <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">Your Answer:</label>
              <input 
@@ -332,7 +365,6 @@ function App() {
                autoFocus
              />
              
-             {/* Feedback Overlays */}
              {feedback === 'correct' && (
                <div className="absolute top-12 -right-4 md:-right-12 text-3xl animate-bounce">
                   ✨
@@ -343,10 +375,6 @@ function App() {
                   ❌
                </div>
              )}
-           </div>
-
-           <div className="mt-6 text-center">
-             <a href="#" className="text-violet-500 hover:text-violet-700 text-sm font-medium underline decoration-violet-300 underline-offset-4">? Need a hint?</a>
            </div>
 
            <div className="mt-8 max-w-md mx-auto">
@@ -363,6 +391,57 @@ function App() {
     )
   }
 
+  const ParentView = () => (
+    <div className="flex-1 flex flex-col items-center p-4 sm:p-8 animate-in fade-in max-w-4xl mx-auto w-full">
+      <h2 className="text-4xl font-extrabold text-gray-800 flex items-center gap-3 mb-8 mt-4">
+        👪 Parent Dashboard
+      </h2>
+      <div className="bg-white rounded-[2rem] p-8 shadow-xl w-full grid grid-cols-1 sm:grid-cols-2 gap-6 text-center border-t-8 border-violet-500">
+        <div className="bg-violet-50 p-8 rounded-2xl border border-violet-100">
+          <div className="text-5xl mb-3">⚡</div>
+          <div className="text-4xl font-black text-violet-700">{level}</div>
+          <div className="text-sm text-gray-500 mt-2 font-bold uppercase tracking-wide">Current Level</div>
+        </div>
+        <div className="bg-amber-50 p-8 rounded-2xl border border-amber-100">
+          <div className="text-5xl mb-3">⭐</div>
+          <div className="text-4xl font-black text-amber-600">{xp}</div>
+          <div className="text-sm text-gray-500 mt-2 font-bold uppercase tracking-wide">Current XP</div>
+        </div>
+        <div className="bg-emerald-50 p-8 rounded-2xl border border-emerald-100">
+          <div className="text-5xl mb-3">🎯</div>
+          <div className="text-4xl font-black text-emerald-600">{highestStreak}</div>
+          <div className="text-sm text-gray-500 mt-2 font-bold uppercase tracking-wide">Highest Streak</div>
+        </div>
+        <div className="bg-rose-50 p-8 rounded-2xl border border-rose-100">
+          <div className="text-5xl mb-3">✅</div>
+          <div className="text-4xl font-black text-rose-600">{totalCorrect}</div>
+          <div className="text-sm text-gray-500 mt-2 font-bold uppercase tracking-wide">Total Correct</div>
+        </div>
+      </div>
+      <button onClick={() => setView('dashboard')} className="mt-10 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-10 rounded-2xl transition-all shadow-sm kid-button text-lg">
+        Back to Dashboard
+      </button>
+    </div>
+  )
+
+  const TestResultView = () => (
+    <div className="flex-1 flex flex-col items-center justify-center p-4 animate-in zoom-in">
+      <div className="bg-white rounded-[2rem] shadow-2xl p-10 max-w-md w-full text-center border-t-8 border-amber-500 relative overflow-hidden">
+         <div className="text-7xl mb-6">{testScore >= 8 ? '🏆' : testScore >= 5 ? '👍' : '📚'}</div>
+         <h2 className="text-3xl font-black text-gray-800 mb-2">Test Complete!</h2>
+         <p className="text-gray-500 font-medium mb-8">You answered {TEST_LENGTH} questions.</p>
+         
+         <div className="text-6xl font-black text-amber-500 mb-8">
+            {testScore} <span className="text-3xl text-gray-300">/ {TEST_LENGTH}</span>
+         </div>
+         
+         <button onClick={() => setView('dashboard')} className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-4 px-8 rounded-2xl shadow-md transition-all kid-button text-xl">
+           Continue Learning
+         </button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex flex-col min-h-screen bg-[#eceffd] font-['Inter',sans-serif] text-slate-800 relative">
       <Header />
@@ -370,9 +449,11 @@ function App() {
       {view === 'intro' && IntroView()}
       {view === 'dashboard' && DashboardView()}
       {view === 'quiz' && QuizView()}
+      {view === 'parent' && ParentView()}
+      {view === 'testResult' && TestResultView()}
 
       {/* Footer */}
-      {(view === 'dashboard' || view === 'quiz') && (
+      {(view === 'dashboard' || view === 'quiz' || view === 'parent' || view === 'testResult') && (
         <div className="bg-[#111827] text-gray-400 py-6 text-center text-sm w-full mt-auto">
           <div>© 2026 Math Wizard. Made with 💙 for curious minds.</div>
           <div className="mt-1">Keep your learning streak alive! 🔥</div>

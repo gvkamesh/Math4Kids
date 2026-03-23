@@ -1,47 +1,41 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Nunito", "Comic Sans MS", "Chalkboard SE", sans-serif;
-  --color-primary: #FF6B6B;
-  --color-secondary: #4ECDC4;
-  --color-tertiary: #FFE66D;
-  --color-background: #F7FFF7;
-  --color-text: #2C3E50;
-  --color-success: #2ECC71;
-  --color-error: #E74C3C;
+  --font-sans: "Inter", "Open Sans", sans-serif;
+  --color-mw-bg: #eceffd;
+  --color-mw-primary: #6d28d9; /* violet-700 */
+  --color-mw-secondary: #f59e0b; /* amber-500 */
+  --color-mw-accent: #10b981; /* emerald-500 */
 }
 
 body {
-  background-color: var(--color-background);
-  color: var(--color-text);
+  background-color: var(--color-mw-bg);
+  color: #1f2937;
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
 }
 
+/* Base button animations */
 .kid-button {
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .kid-button:hover {
-  transform: scale(1.05) translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 .kid-button:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 @keyframes popping {
-  0% { transform: scale(0.5); opacity: 0; }
-  80% { transform: scale(1.1); }
+  0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
 
 .animate-pop {
-  animation: popping 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: popping 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 @keyframes shake {
@@ -53,4 +47,23 @@ body {
 
 .animate-shake {
   animation: shake 0.4s ease-in-out;
+}
+
+/* Animations for zooming in */
+@keyframes zoomIn {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in.zoom-in {
+  animation: zoomIn 0.3s ease-out forwards;
+}
+
+.animate-in.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
 }

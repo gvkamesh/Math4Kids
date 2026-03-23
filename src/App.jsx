@@ -367,9 +367,9 @@ function App() {
     <div className="flex flex-col min-h-screen bg-[#eceffd] font-['Inter',sans-serif] text-slate-800 relative">
       <Header />
       
-      {view === 'intro' && <IntroView />}
-      {view === 'dashboard' && <DashboardView />}
-      {view === 'quiz' && <QuizView />}
+      {view === 'intro' && IntroView()}
+      {view === 'dashboard' && DashboardView()}
+      {view === 'quiz' && QuizView()}
 
       {/* Footer */}
       {(view === 'dashboard' || view === 'quiz') && (
